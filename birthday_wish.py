@@ -1,0 +1,582 @@
+"""
+===================================================================
+  🎉 PYTHON BIRTHDAY EXPERIENCE FOR MONISSHA 🎉
+===================================================================
+"""
+
+import sys
+import os
+import time
+import webbrowser
+from pathlib import Path
+import config
+
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
+def generate_web_birthday_card(output_path="index.html", auto_open=True):
+    """Generates an interactive web birthday card with all photos from photos/ folder."""
+    photos_dir = Path(__file__).parent / config.PHOTOS_DIR
+    photo_files = []
+    video_exts = {'.mp4', '.mov', '.webm', '.mkv'}
+    
+    if photos_dir.exists():
+        for ext in ('*.png', '*.jpg', '*.jpeg', '*.webp', '*.mp4', '*.mov', '*.webm', '*.mkv'):
+            photo_files.extend(list(photos_dir.glob(ext)))
+    
+    photo_elements = ""
+    for idx, p in enumerate(photo_files):
+        p_uri = p.resolve().as_uri()
+        active_class = "active" if idx == 0 else ""
+        if p.suffix.lower() in video_exts:
+            photo_elements += f'''
+        <div class="carousel-slide {active_class}" onclick="blastCurrentPhoto()">
+            <video controls style="width: 100%; height: 350px; object-fit: cover; border-radius: 15px;">
+                <source src="{p_uri}" type="video/{p.suffix.lower().replace('.', '')}">
+                Your browser does not support the video tag.
+            </video>
+            <div class="caption">Video Memory #{idx+1} 🎥❤️</div>
+        </div>
+        '''
+        else:
+            photo_elements += f'''
+        <div class="carousel-slide {active_class}" onclick="blastCurrentPhoto()">
+            <img src="{p_uri}" alt="Photo {idx+1}">
+            <div class="caption">Memory #{idx+1} ❤️</div>
+        </div>
+        '''
+    
+    if not photo_elements:
+        photo_elements = '''
+        <div class="carousel-slide active">
+            <div class="placeholder-photo">
+                <p>💖 Add photos to the <code>photos/</code> folder to display Monissha's pictures here! 📸</p>
+            </div>
+        </div>
+        '''
+
+    html_content = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday {config.HER_NAME}! 💖✨</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {{
+            --primary: {config.THEME_COLOR_PRIMARY};
+            --secondary: {config.THEME_COLOR_SECONDARY};
+            --bg: {config.THEME_BACKGROUND};
+            --gold: {config.THEME_GOLD};
+        }}
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        body {{
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at center, #1b1035 0%, var(--bg) 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }}
+
+        #hearts-canvas {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }}
+
+        .container {{
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 10;
+        }}
+
+        header {{
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 1.2s ease;
+        }}
+        h1 {{
+            font-family: 'Dancing Script', cursive;
+            font-size: 4rem;
+            background: linear-gradient(45deg, #ff758c, var(--gold), #ff7eb3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 20px rgba(255, 75, 114, 0.3);
+            margin-bottom: 10px;
+        }}
+        .subtitle {{
+            font-size: 1.3rem;
+            color: var(--secondary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }}
+
+        .card {{
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            padding: 35px;
+            margin-bottom: 35px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }}
+        .card:hover {{
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px rgba(255, 75, 114, 0.25);
+        }}
+
+        .cake-wrapper {{
+            text-align: center;
+            padding: 20px;
+        }}
+        .cake-emoji {{
+            font-size: 6rem;
+            cursor: pointer;
+            display: inline-block;
+            transition: transform 0.3s ease;
+            filter: drop-shadow(0 0 15px var(--gold));
+            animation: floatCake 3s ease-in-out infinite;
+        }}
+        .cake-emoji:hover {{
+            transform: scale(1.15) rotate(5deg);
+        }}
+
+        .btn {{
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(255, 75, 114, 0.4);
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 5px;
+        }}
+        .btn:hover {{
+            transform: scale(1.05);
+            box-shadow: 0 12px 25px rgba(255, 75, 114, 0.6);
+        }}
+
+        /* Carousel */
+        .carousel-container {{
+            position: relative;
+            max-width: 600px;
+            height: 380px;
+            margin: 20px auto;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 133, 161, 0.4);
+            background: rgba(0,0,0,0.3);
+            cursor: pointer;
+        }}
+        .carousel-slide {{
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            animation: fadeIn 0.8s ease;
+        }}
+        .carousel-slide.active {{
+            display: block;
+        }}
+        .carousel-slide img {{
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 25%;
+        }}
+        .caption {{
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            padding: 15px;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }}
+        .carousel-btn {{
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            z-index: 5;
+        }}
+        .carousel-btn.prev {{ left: 15px; }}
+        .carousel-btn.next {{ right: 15px; }}
+
+        /* Photo Explosion Modal */
+        .blast-modal {{
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+        }}
+        .blast-modal.active {{ display: flex; }}
+        .blast-overlay {{
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(10, 5, 25, 0.85);
+            backdrop-filter: blur(12px);
+        }}
+        .blast-content {{
+            position: relative;
+            z-index: 1000;
+            text-align: center;
+            max-width: 90vw;
+            animation: zoomInBlast 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }}
+        .blast-frame {{
+            position: relative;
+            display: inline-block;
+            border-radius: 20px;
+            padding: 10px;
+            background: linear-gradient(45deg, var(--primary), var(--gold), var(--secondary));
+            box-shadow: 0 0 50px rgba(255, 75, 114, 0.8);
+        }}
+        .shockwave {{
+            position: absolute;
+            top: -20px; left: -20px; right: -20px; bottom: -20px;
+            border: 3px solid var(--gold);
+            border-radius: 30px;
+            opacity: 0;
+            pointer-events: none;
+            animation: pulseShockwave 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+        }}
+        .shockwave-2 {{
+            animation-delay: 0.4s;
+            border-color: var(--primary);
+        }}
+        @keyframes pulseShockwave {{
+            0% {{ transform: scale(0.95); opacity: 0.9; }}
+            100% {{ transform: scale(1.35); opacity: 0; }}
+        }}
+        .blast-media-box img {{
+            max-width: 80vw;
+            max-height: 60vh;
+            border-radius: 15px;
+            display: block;
+        }}
+        .blast-close-btn {{
+            position: absolute;
+            top: -20px; right: -20px;
+            background: var(--primary);
+            color: white; border: none;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 1001;
+        }}
+
+        .letter-content {{
+            font-size: 1.15rem;
+            line-height: 1.9;
+            color: #f1eafe;
+            background: rgba(0,0,0,0.25);
+            padding: 30px;
+            border-radius: 20px;
+            border-left: 4px solid var(--primary);
+        }}
+
+        @keyframes zoomInBlast {{
+            0% {{ transform: scale(0.2) rotate(-10deg); opacity: 0; }}
+            100% {{ transform: scale(1) rotate(0deg); opacity: 1; }}
+        }}
+        @keyframes floatCake {{
+            0%, 100% {{ transform: translateY(0); }}
+            50% {{ transform: translateY(-12px); }}
+        }}
+    </style>
+</head>
+<body>
+    <canvas id="hearts-canvas"></canvas>
+
+    <div class="container">
+        <header>
+            <h1>Happy Birthday {config.HER_NAME}! 🎂🎉❤️</h1>
+            <div class="subtitle">To My Best Best Friend • Stay Happy • Stay Crazy</div>
+        </header>
+
+        <div class="card cake-wrapper">
+            <div class="cake-emoji" onclick="triggerFireworks()">🎂</div>
+            <h2 style="margin-top: 15px;">Tap the Cake to Blow Candles & Blast Confetti! 🎆</h2>
+            <button class="btn" onclick="triggerFireworks()">🎉 Launch Fireworks & Celebration!</button>
+            <button class="btn" style="background: linear-gradient(135deg, var(--gold), #ff9f43); color: #000;" onclick="blastCurrentPhoto()">💥 Blast Active Picture!</button>
+        </div>
+
+        <!-- Photo Gallery Carousel -->
+        <div class="card">
+            <h2 style="text-align: center; margin-bottom: 15px; color: var(--secondary);">📸 Memories & Special Moments (Tap Photo to Blast 💥)</h2>
+            <div class="carousel-container">
+                <button class="carousel-btn prev" onclick="event.stopPropagation(); changeSlide(-1)">❮</button>
+                {photo_elements}
+                <button class="carousel-btn next" onclick="event.stopPropagation(); changeSlide(1)">❯</button>
+            </div>
+            <p style="text-align: center; font-size: 0.95rem; color: var(--secondary); margin-top: 10px;">
+                💡 <strong>Tip:</strong> Drop your photos/videos into the <code>photos/</code> folder to display them here!
+            </p>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-bottom: 20px; color: var(--primary); font-size: 2rem;">🎂 Happy Birthday to My Best Best Friend! 💖</h2>
+            <div class="letter-content">
+                <h3 style="color: var(--gold); margin-bottom: 10px;">🌟 To My Special Person</h3>
+                <p>Today is not just another day. It is the day a truly amazing person came into this world — <strong>my best best friend</strong>. 🥳❤️</p>
+                <p>I honestly feel lucky to have you in my life. You are more than just a friend to me. You are someone I can laugh with, share my problems with, fight with, make crazy memories with, and still know that our friendship will always remain strong.</p>
+                <br>
+                <h3 style="color: var(--secondary); margin-bottom: 10px;">🫶 Thank You for Being There</h3>
+                <p>Thank you for every laugh, every conversation, every piece of advice, every silly moment, and every memory we have created together.</p>
+                <p>There were good days and bad days, but having you beside me made everything better. No matter how much we argue or tease each other, you will always have a special place in my heart.</p>
+                <br>
+                <h3 style="color: var(--gold); margin-bottom: 10px;">😂 Our Crazy Memories</h3>
+                <p>From our stupid jokes to our endless conversations, from laughing at things that nobody else understands to creating memories that we will talk about years from now — every moment with you is special.</p>
+                <p>Sometimes I wonder how two people can be this crazy and still be best friends. 😂❤️</p>
+                <p>But honestly, I wouldn't change a single thing about our friendship.</p>
+                <br>
+                <h3 style="color: var(--primary); margin-bottom: 10px;">🎁 My Birthday Wish for You</h3>
+                <p>On your special day, I wish you:</p>
+                <ul style="list-style: none; padding-left: 15px; margin: 10px 0;">
+                    <li>🌟 Unlimited happiness</li>
+                    <li>❤️ A life filled with love</li>
+                    <li>🎯 Success in everything you do</li>
+                    <li>💰 Plenty of money and opportunities</li>
+                    <li>😄 Endless reasons to smile</li>
+                    <li>✨ The courage to achieve your dreams</li>
+                    <li>🫂 Amazing people around you</li>
+                    <li>🎉 Many more beautiful memories</li>
+                </ul>
+                <p>May this new year of your life be even better than everything you've experienced before.</p>
+                <br>
+                <h3 style="color: var(--gold); margin-bottom: 10px;">💌 One Special Promise</h3>
+                <p>No matter where life takes us, how busy we become, or how many years pass, I hope our friendship never changes.</p>
+                <p>We may grow older, but I hope we never grow out of our crazy friendship. 😂</p>
+                <p>I will always be there to celebrate your happiness, support you during difficult times, and remind you how special you are whenever you forget.</p>
+                <br>
+                <h3 style="color: var(--primary); font-size: 1.5rem; text-align: center; margin: 20px 0;">🥳 HAPPY BIRTHDAY!</h3>
+                <p style="text-align: center; font-size: 1.3rem; font-weight: bold; color: var(--gold);">Happy Birthday, my best best friend! 🎂🎉❤️</p>
+                <br>
+                <p>May your smile always stay the same, your dreams become reality, and your life be filled with countless beautiful moments.</p>
+                <p>Thank you for being a wonderful part of my life.</p>
+                <p style="font-weight: bold; margin-top: 10px;">Stay happy. Stay crazy. Stay amazing.</p>
+                <br>
+                <div style="background: rgba(255, 75, 114, 0.15); padding: 15px; border-radius: 12px; border: 1px dashed var(--primary); text-align: center; font-weight: bold; color: #fff; font-size: 1.2rem;">
+                    ❤️ NEVER FORGET THAT YOU HAVE A FRIEND WHO WILL ALWAYS BE THERE FOR YOU! ❤️
+                </div>
+                <br>
+                <p style="text-align: center; font-size: 1.3rem; font-weight: bold; color: var(--gold);">Happy Birthday once again! 🎂🥳🎁✨</p>
+                <br>
+                <p style="text-align: right; font-style: italic; font-weight: bold; color: var(--secondary);">— With Lots of Love,<br><span style="font-size: 1.2rem; color: var(--primary);">Your Best Friend Forever ❤️</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Explosion Blast Modal -->
+    <div id="photo-blast-modal" class="blast-modal">
+        <div class="blast-overlay" onclick="closeBlastModal()"></div>
+        <div class="blast-content">
+            <button class="blast-close-btn" onclick="closeBlastModal()">✕</button>
+            <div class="blast-frame">
+                <div class="shockwave"></div>
+                <div class="shockwave shockwave-2"></div>
+                <div id="blast-media-container" class="blast-media-box"></div>
+                <div style="margin-top: 15px; font-weight: bold; font-size: 1.2rem; color: var(--gold);" id="blast-caption">Memory #1 ❤️</div>
+            </div>
+            <div style="margin-top: 20px;">
+                <button class="btn" style="background: linear-gradient(135deg, var(--gold), #ff9f43); color: #000;" onclick="blastNextPhoto()">💥 Blast Next Active Picture! 🎆</button>
+                <button class="btn" onclick="closeBlastModal()">✨ Beautiful!</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Hearts Canvas
+        const canvas = document.getElementById('hearts-canvas');
+        const ctx = canvas.getContext('2d');
+        let hearts = [];
+
+        function resizeCanvas() {{
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }}
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Heart {{
+            constructor() {{ this.reset(); }}
+            reset() {{
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height + 20;
+                this.size = Math.random() * 15 + 10;
+                this.speed = Math.random() * 1.5 + 0.5;
+                this.opacity = Math.random() * 0.7 + 0.3;
+            }}
+            update() {{
+                this.y -= this.speed;
+                if (this.y < -20) this.reset();
+            }}
+            draw() {{
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.fillStyle = '#FF4B72';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }}
+        }}
+
+        for (let i = 0; i < 35; i++) hearts.push(new Heart());
+
+        function animate() {{
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hearts.forEach(h => {{ h.update(); h.draw(); }});
+            requestAnimationFrame(animate);
+        }}
+        animate();
+
+        // Carousel controls
+        let slideIndex = 0;
+        const slides = document.querySelectorAll('.carousel-slide');
+
+        function showSlide(n) {{
+            if (!slides.length) return;
+            slides.forEach(s => s.classList.remove('active'));
+            slideIndex = (n + slides.length) % slides.length;
+            slides[slideIndex].classList.add('active');
+        }}
+
+        function changeSlide(n) {{
+            showSlide(slideIndex + n);
+        }}
+
+        function triggerFireworks() {{
+            if (typeof confetti === 'function') {{
+                confetti({{ particleCount: 150, spread: 90, origin: {{ y: 0.6 }} }});
+            }} else {{
+                alert("🎉 Happy Birthday Monissha! 🥳❤️");
+            }}
+        }}
+
+        function blastCurrentPhoto() {{
+            const activeSlide = slides[slideIndex];
+            if (!activeSlide) return;
+            
+            if (typeof confetti === 'function') {{
+                confetti({{ particleCount: 120, spread: 80, origin: {{ y: 0.5, x: 0.5 }} }});
+            }}
+            
+            const img = activeSlide.querySelector('img');
+            const video = activeSlide.querySelector('video');
+            const container = document.getElementById('blast-media-container');
+            const caption = document.getElementById('blast-caption');
+
+            if (img) {{
+                container.innerHTML = `<img src="${{img.src}}" alt="Active Blasted Photo">`;
+            }} else if (video) {{
+                container.innerHTML = `<video controls autoplay style="max-width: 80vw; max-height: 60vh; border-radius: 15px;"><source src="${{video.querySelector('source').src}}"></video>`;
+            }}
+
+            caption.innerText = activeSlide.querySelector('.caption')?.innerText || "Memory ❤️";
+            document.getElementById('photo-blast-modal').classList.add('active');
+        }}
+
+        function blastNextPhoto() {{
+            changeSlide(1);
+            blastCurrentPhoto();
+        }}
+
+        function closeBlastModal() {{
+            document.getElementById('photo-blast-modal').classList.remove('active');
+        }}
+    </script>
+</body>
+</html>
+'''
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(html_content)
+    
+    print(f"✨ Interactive Web Card created at: {Path(output_path).resolve()}")
+    if auto_open:
+        webbrowser.open(Path(output_path).resolve().as_uri())
+
+def print_banner():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    
+    PINK = '\033[95m'
+    RED = '\033[91m'
+    GOLD = '\033[93m'
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+
+    heart_ascii = [
+        "   ***   ***   ",
+        "  ***** *****  ",
+        " ************* ",
+        " ************* ",
+        "  ***********  ",
+        "   *********   ",
+        "     *****     ",
+        "       *       "
+    ]
+
+    print(f"\n{GOLD}" + "="*65 + f"{RESET}")
+    for line in heart_ascii:
+        print(f"{RED}{line.center(65)}{RESET}")
+    print(f"{GOLD}" + "="*65 + f"{RESET}\n")
+
+    print(f"{PINK}{BOLD}   💖 HAPPY BIRTHDAY TO {config.HER_NAME.upper()}! 🎂🎉❤️{RESET}\n".center(75))
+
+    full_message = "\n".join(config.BIRTHDAY_LETTER)
+    for char in full_message:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        time.sleep(0.02)
+
+    print(f"\n\n{GOLD}Press Enter to launch the Interactive Web Birthday Card...{RESET}")
+    try:
+        input()
+    except EOFError:
+        pass
+    
+    generate_web_birthday_card(auto_open=True)
+
+if __name__ == "__main__":
+    if "--web" in sys.argv:
+        generate_web_birthday_card(auto_open=True)
+    else:
+        generate_web_birthday_card(auto_open=True)
